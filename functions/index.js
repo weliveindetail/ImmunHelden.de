@@ -8,6 +8,19 @@ admin.initializeApp();
 const immuneHeroesTable = '/immuneHeroes'
 const stakeHoldersTable = '/stakeHolders'
 
+
+function toBool(string) {
+  if (string) {
+    switch (string.toLowerCase().trim()) {
+      case "true": case "yes": case "1": case "on": return true;
+      case "false": case "no": case "0": case "off": case null: return false;
+      default: return Boolean(string);
+    }
+  }
+  return false;
+}
+
+
 exports.addImmuneHero = functions.https.onRequest(async (req, res) => {
   const preName = req.query.preName
   const lastName = req.query.lastName
@@ -117,9 +130,10 @@ exports.addStakeHolder = functions.https.onRequest(async (req, res) => {
 exports.doneVerifyStakeholderPin = functions.https.onRequest(async (req, res) => {
   // TODO: Check the key didn't time out yet!
   const updates = {};
-  updates["/stakeHolders/" + req.query.key + "/latitude"] = req.query.exact_lat;
-  updates["/stakeHolders/" + req.query.key + "/longitude"] = req.query.exact_lng;
-  updates["/stakeHolders/" + req.query.key + "/showOnMap"] = req.query.show_on_map;
+  const key = req.query.key;
+  updates[`/stakeHolders/${key}/latitude`] = parseFloat(req.query.exact_lat);
+  updates[`/stakeHolders/${key}/longitude`] = parseFloat(req.query.exact_lng);
+  updates[`/stakeHolders/${key}/directContact`] = toBool(req.query.show_on_map);
 
   // Update database record with confirmed exact pin location.
   admin.database().ref().update(updates);
@@ -312,6 +326,99 @@ const DEMO_HEROES = {
     "zipCode" : "85521"
   }
 };
+
+
+exports.pin_locations = functions.https.onRequest(async (req, res) => {
+  const locations = []; // Array
+
+  for (const key in DEMO_STAKEHOLDERS) {
+    const entry = DEMO_STAKEHOLDERS[key];
+    locations.push({
+      "id": key,
+      "type": 0,
+      "title": entry.organisation,
+      "latLng": [entry.latitude, entry.longitude]
+    });
+  }
+
+  res.json(locations).send();
+});
+
+exports.regions = functions.https.onRequest(async (req, res) => {
+  const regions = {}; // Map: ZIP -> [ ID, ID, ... ]
+
+  for (const key in DEMO_HEROES) {
+    const entry = DEMO_HEROES[key];
+    if (regions.hasOwnProperty(entry.zipCode)) {
+      regions[entry.zipCode].push(key);
+    }
+    else {
+      regions[entry.zipCode] = [key];
+    }
+  }
+
+  res.json(regions).send();
+});
+
+function formatFullAddressHTML(entry) {
+  let items = [];
+  if (entry.hasOwnProperty("address") && entry.address.length > 0)
+    items.push(entry.address);
+  if (entry.hasOwnProperty("zipCode") && entry.zipCode.length > 0)
+    items.push(entry.zipCode);
+  if (entry.hasOwnProperty("city") && entry.city.length > 0)
+    items.push(entry.city);
+  return items.join(', ');
+}
+
+function formatStakeholderDetailsHTML(key, entry) {
+  let html = entry.organisation ? `<h2>${entry.organisation}</h2>` : '';
+
+  const addressHTML = formatFullAddressHTML(entry);
+  if (addressHTML.length > 0)
+    html += `<b>Wo?</b><p>${addressHTML}</p>`;
+
+  const textHTML = entry.text.split(/\r?\n/).join("<br>");
+  html += `<b>Was kann ich tun?</b><p>${textHTML}</p>`;
+
+  if (entry.directContact) {
+    html += `✉ <a href="mailto:${entry.emailAddress}">Email</a> `;
+    html += `☎ <a href="tel:${entry.phoneNumber}">Telefon</a>`;
+  }
+  else {
+    html += `<form action="https://immunhelden.de/contactStakeholder" method="POST">`;
+    html += `<input type="hidden" name="key" value="${key}">`;
+    html += `<textarea name="message" rows="3" placeholder="Kurze Nachricht" required></textarea>`;
+    html += `<input type="text" name="contact" placeholder="Kontakt" required><input type="submit" value="Absenden">`;
+    html += `</form>`;
+  }
+
+  return `<div>${html}</div>`;
+}
+
+exports.details_html = functions.https.onRequest(async (req, res) => {
+  const key = req.query.id;
+  if (DEMO_STAKEHOLDERS.hasOwnProperty(key)) {
+    const html = formatStakeholderDetailsHTML(key, DEMO_STAKEHOLDERS[key]);
+    console.log(html);
+    res.send(html);
+    return;
+  }
+
+  res.send(""); // No details available
+});
+
+
+exports.contactStakeholder = functions.https.onRequest(async (req, res) => {
+  // Check for POST request
+  if (req.method !== "POST") {
+    res.status(400).send('Please send a POST request');
+    return;
+  }
+
+  res.send(req.body.contact + ' an ' + req.body.key + ':\n' + req.body.message);
+});
+
 
 exports.getAllImmuneHeroesNutsAsJson = functions.https.onRequest(async (req, res) => {
   const heroesData = await admin.database().ref(immuneHeroesTable).once('value');
