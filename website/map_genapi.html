@@ -22,6 +22,16 @@
       color: #393939;
     }
 
+    path {
+      stroke: rgb(136, 136, 136);
+      stroke-opacity: 0.2;
+      stroke-width: 1;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: rgb(136, 136, 136);
+      fill-opacity: 0.025;
+    }
+
     div#osm-map {
       position: absolute;
       left: 0px;
@@ -29,9 +39,9 @@
       width: 100%;
       height: calc(100% - 44px);
     }
-    #osm-map-overlay {
+    #osm-map-lock {
       position: absolute;
-      z-index: 9999;
+      z-index: 10004;
       left: 0px;
       top: 0px;
       width: 100%;
@@ -185,7 +195,7 @@
     <a class="logo" href="index.html">ImmunHelden</a>
   </header>
   <div id="osm-map"></div>
-  <div id="osm-map-overlay"></div>
+  <div id="osm-map-lock"></div>
   <div id="osm-map-pane">
     <div id="osm-map-details">
     </div>
@@ -240,12 +250,12 @@
 
     L.Control.Legend = L.Control.extend({
       onAdd: function(map) {
-        let div = L.DomUtil.create('div', 'leaflet-bar');
+        var div = L.DomUtil.create('div', 'leaflet-bar');
         div.style.backgroundColor = "#fff";
         div.style.padding = "3px 8px";
         div.id = "legend";
 
-        let html = '';
+        var html = '';
         html += '<table>';
         html += '<tr><td><img src="images/marker-icon-2x-blue.png"></td><td>Angebot einer Hilfesuchenden</td></tr>';
         html += '<tr><td><img src="images/region.png"></td><td>Region mit registrierten ImmunHelden</td></tr>';
@@ -256,10 +266,6 @@
         return div;
       }
     });
-
-    function createLegend() {
-      return new L.Control.Legend({ position: 'bottomleft' });
-    }
 
     function loadJson(fileUrl) {
       return new Promise(function(resolve, reject) {
@@ -279,14 +285,14 @@
       });
     }
 
-    const params = parseUrlParams(window.location.href);
-    const baseUrl = params.hasOwnProperty("baseUrl") ? params.baseUrl : '';
-    const initialZoom = params.hasOwnProperty("zoom") ? params.zoom : 6;
-    const interactive = params.hasOwnProperty("interactive") ? toBool(params.interactive) : true;
-    const showHeader = params.hasOwnProperty("header") ? toBool(params.header) : true;
+    var params = parseUrlParams(window.location.href);
+    var baseUrl = params.hasOwnProperty("baseUrl") ? params.baseUrl : '';
+    var initialZoom = params.hasOwnProperty("zoom") ? params.zoom : 6;
+    var interactive = params.hasOwnProperty("interactive") ? toBool(params.interactive) : true;
+    var showHeader = params.hasOwnProperty("header") ? toBool(params.header) : true;
 
     if (!interactive) {
-      $("#osm-map-overlay").css("height", "100%");
+      $("#osm-map-lock").css("height", "100%");
     }
     if (!showHeader) {
       $("#header").css("height", "0");
@@ -295,7 +301,7 @@
       $("#beta-ribbon").hide();
     }
 
-    let map = new L.map('osm-map', {
+    var map = new L.map('osm-map', {
       center: [51, 10],
       zoom: initialZoom,
       zoomControl: interactive,
@@ -305,7 +311,9 @@
     });
 
     createBaseLayer().addTo(map);
-    createLegend().addTo(map);
+
+    var legend = new L.Control.Legend({ position: 'bottomleft' });
+    legend.addTo(map);
 
     function createClinicPopupContent(json) {
       let html = "";
@@ -391,6 +399,7 @@
     }
 
     var allPinsById;
+    var allRegionsByZip;
 
     function viewDetails(id) {
       if (!allPinsById.hasOwnProperty(id)) {
@@ -403,7 +412,9 @@
       $("#osm-map").css("width", "calc(100% - 400px)");
 
       // TODO: if there's space left for the map at all
+      map.invalidateSize();
       map.panTo(L.latLng(allPinsById[id].latlng));
+      $("#legend").hide();
 
       if (allPinsById[id].hasOwnProperty("cachedDetails")) {
         $("#osm-map-details").html(allPinsById[id].cachedDetails);
@@ -422,8 +433,51 @@
     function closeDetails() {
       $("#osm-map-pane").hide();
       $("#osm-map").css("width", "100%");
+      map.invalidateSize();
+      $("#legend").show();
     }
 
+    loadJson('assets/Karte_de_geodata.geo.json').then(geoJson => {
+      var options = {
+        onEachFeature: (feature, layer) => {
+          //if (feature.info) {
+          //  let content = '<b>{0}</b>'.format(feature.info.name);
+          //  if (feature.info.img) {
+          //    content += ('<br>' +
+          //      '<a href="eliseentournee/{0}" target="_blank">' +
+          //        '<img src="eliseentournee/preview/{0}" class="thumb">' +
+          //      '</a>').format(feature.info.img);
+          //  }
+          //  let p = layer.bindPopup(content, {
+          //    offset: L.point(0, -3),
+          //    autoPanPadding: L.point(50, 50),
+          //    autoClose: false,
+          //    closeOnClick: false
+          //  });
+          //  p.bulkOpen = feature.info.open;
+          //  p.latlng = L.latLng({
+          //    lng: feature.geometry.coordinates[0],
+          //    lat: feature.geometry.coordinates[1]
+          //  });
+          //  p.color = dateToColor(feature.info.date);
+          //  popups[nextPopupIdx++] = p;
+          //}
+          //console.log(feature.geometry.coordinates);
+          console.log(feature);
+        }
+        //, pointToLayer: (feature, latlng) => {
+        //  return L.marker(latlng, {
+        //    icon: L.icon({
+        //      iconUrl: 'marker.png',
+        //      className: 'marker-stop'
+        //    })
+        //  });
+        //}
+      };
+
+      console.log(geoJson);
+      L.geoJSON(geoJson, options).addTo(map);
+    });
 
     loadJson(baseUrl + '/map/pins').then(pinsById => {
       for (const id in pinsById) {

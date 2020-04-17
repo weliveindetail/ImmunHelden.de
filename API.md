@@ -9,7 +9,6 @@ This request is issued on load and retrieves the position of all pins to display
 | `latlng`<br>(Array) | Coordinates on the map as Float values |
 | `type`<br>(Index) | Index into the Array of pin image URLs (see `pin_imgs`). Determines the image used to display the pin. May also be used for filters in the future.  |
 | `title`<br>(String) | Minmal info text displayed to the user without fetching further data |
-| `id`<br>(String) | Identifier for fetching more information from `details_html` |
 
 Example:
 
