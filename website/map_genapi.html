@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ImmunHelden Map</title>
+
+  <link rel="stylesheet" href="assets/css/leaflet.css">
+  <script src="assets/js/leaflet.min.js"></script>
+  <script src="assets/js/jquery.min.js"></script>
+
+  <style>
+    @import url("https://fonts.googleapis.com/css?family=Raleway:200,300,400,500,600");
+
+    body {
+      font-family: "Raleway", Arial, Helvetica, sans-serif;
+      margin: 0;
+    }
+
+    a:link, a:visited, a:hover, a:active {
+      text-decoration: none;
+      color: #393939;
+    }
+
+    div#osm-map {
+      position: absolute;
+      left: 0px;
+      top: 44px;
+      width: 100%;
+      height: calc(100% - 44px);
+    }
+    #osm-map-overlay {
+      position: absolute;
+      z-index: 9999;
+      left: 0px;
+      top: 0px;
+      width: 100%;
+      height: 0px;
+    }
+    #osm-map-pane {
+      position: absolute;
+      z-index: 10003;
+      top: 0px;
+      right: 0px;
+      width: 400px;
+      height: 100%;
+      background-color: #fff;
+      display: none;
+    }
+    #osm-map-details {
+      margin: 1rem;
+      width: calc(100% - 2rem);
+      height: calc(100% - 4rem);
+      overflow: scroll;
+    }
+    #osm-map-pane-close {
+      width: 100%;
+      height: 2rem;
+      text-align: center;
+      background-color: #fff;
+    }
+    img.spin-loading {
+      width: 100%;
+      height: auto;
+    }
+
+    /*
+    div.popup-pin h2 img.arrow {
+      width: auto;
+      height: 0.75rem;
+      padding-right: 0.2rem;
+    }
+    */
+    /*
+    div.popup-pin h2 a {
+      background-image: url('images/arrowhead_shut.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      padding: 0 1.25rem;
+    }
+    */
+    div.popup-pin p {
+      margin-top: 0;
+      margin-bottom: 0.75em;
+    }
+
+    div.popup-pin td {
+      vertical-align: top;
+    }
+
+    div.popup-pin img.expander {
+      width: auto;
+      height: 1.2rem;
+    }
+
+    div.popup-immuneheroes b {
+      font-size: 1.5rem;
+      color: #d3303b;
+    }
+    div.popup-immuneheroes img {
+      height: 1.2rem;
+      width: auto;
+    }
+    div.popup-clinic img {
+      height: 2rem;
+      float: left;
+    }
+    div.popup-clinic div {
+      padding-left: 2.5rem;
+      padding-bottom: 0.5rem;
+    }
+    .nuts-polygon {
+      fill: #479325;
+      stroke: #479325;
+      stroke-width: 1.5px;
+      stroke-opacity: 0.75;
+      fill-opacity: 0.05;
+      stroke-linecap: round;
+    }
+    header {
+      font-family: "Raleway", Arial, Helvetica, sans-serif;
+      line-height: 44px;
+      background: #111111;
+    }
+    header .logo {
+      padding: 0 1.25rem;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    header a:link, header a:visited, header a:hover, header a:active {
+      color: white;
+      text-decoration: none;
+    }
+
+    #legend img {
+      height: 1rem;
+      padding: 0 0.25rem;
+    }
+
+    #legend table {
+      margin-top: 4px;
+    }
+
+    #legend td:first-child {
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .beta-ribbon-wrapper {
+      width: 130px;
+      height: 130px;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 10002;
+    }
+    .beta-ribbon {
+      font-weight: bold;
+      text-align: center;
+      transform: rotate(45deg);
+      position: relative;
+      padding: 7px 0;
+      left: 0px;
+      top: 11px;
+      width: 200px;
+      background-color: #ffea94;
+      background-image: linear-gradient(to bottom, #ffea94, #ffea5E);
+    }
+    .beta-ribbon a:link, .beta-ribbon a:visited, .beta-ribbon a:hover, .beta-ribbon a:active {
+      font-size: 18px;
+      text-decoration: none;
+      color: #393939;
+    }
+  </style>
+</head>
+<body>
+  <div class="beta-ribbon-wrapper" id="beta-ribbon">
+    <div class="beta-ribbon">
+      <a target="_blank" href="https://github.com/weliveindetail/ImmunHelden.de">Beta</a>
+    </div>
+  </div>
+
+  <header id="header">
+    <a class="logo" href="index.html">ImmunHelden</a>
+  </header>
+  <div id="osm-map"></div>
+  <div id="osm-map-overlay"></div>
+  <div id="osm-map-pane">
+    <div id="osm-map-details">
+    </div>
+    <div id="osm-map-pane-close">
+      <a href="#" onclick="closeDetails();" style="display: block;">
+        Einklappen &gt;&gt;
+      </a>
+    </div>
+  </div>
+
+  <script>
+    if (!String.prototype.format) {
+      String.prototype.format = function() {
+        var args = Array.prototype.slice.call(arguments);
+        return this.replace(/{(\d+)}/g, function(match, number) {
+          return typeof args[number] != 'undefined'
+            ? args[number]
+            : match
+          ;
+        });
+      };
+    }
+
+    function toBool(string) {
+      if (string) {
+        switch (string.toLowerCase().trim()) {
+          case "true": case "yes": case "1": case "on": return true;
+          case "false": case "no": case "0": case "off": case null: return false;
+          default: return Boolean(string);
+        }
+      }
+      return false;
+    }
+
+    function parseUrlParams(url) {
+      const regex = /[?&]([^=#]+)=([^&#]*)/g;
+      let params = {};
+      let match;
+      while(match = regex.exec(url)) {
+        params[match[1]] = match[2];
+      }
+      return params;
+    }
+
+    function createBaseLayer() {
+      return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}.png',
+            { attribution:
+                '<a href="https://carto.com/help/building-maps/basemap-list/">Map tiles by Carto under CC BY 3.0</a> | ' +
+                '<a href="http://osm.org/copyright">Data by OpenStreetMap under ODbL</a>'
+            });
+    }
+
+    L.Control.Legend = L.Control.extend({
+      onAdd: function(map) {
+        let div = L.DomUtil.create('div', 'leaflet-bar');
+        div.style.backgroundColor = "#fff";
+        div.style.padding = "3px 8px";
+        div.id = "legend";
+
+        let html = '';
+        html += '<table>';
+        html += '<tr><td><img src="images/marker-icon-2x-blue.png"></td><td>Angebot einer Hilfesuchenden</td></tr>';
+        html += '<tr><td><img src="images/region.png"></td><td>Region mit registrierten ImmunHelden</td></tr>';
+        html += '<tr><td><img src="images/superhero.png"></td><td>Anzahl der ImmunHelden in der Region</td></tr>';
+        html += '</table>';
+
+        div.innerHTML = html;
+        return div;
+      }
+    });
+
+    function createLegend() {
+      return new L.Control.Legend({ position: 'bottomleft' });
+    }
+
+    function loadJson(fileUrl) {
+      return new Promise(function(resolve, reject) {
+        $.ajax({ url: fileUrl })
+          .fail(() => reject("Error querying " + fileUrl))
+          .done(content => {
+            resolve((typeof content === 'string') ? JSON.parse(content) : content);
+          });
+      });
+    }
+
+    function loadHtml(fileUrl) {
+      return new Promise(function(resolve, reject) {
+        $.ajax({ url: fileUrl })
+          .fail(() => reject("Error querying " + fileUrl))
+          .done(content => resolve(content));
+      });
+    }
+
+    const params = parseUrlParams(window.location.href);
+    const baseUrl = params.hasOwnProperty("baseUrl") ? params.baseUrl : '';
+    const initialZoom = params.hasOwnProperty("zoom") ? params.zoom : 6;
+    const interactive = params.hasOwnProperty("interactive") ? toBool(params.interactive) : true;
+    const showHeader = params.hasOwnProperty("header") ? toBool(params.header) : true;
+
+    if (!interactive) {
+      $("#osm-map-overlay").css("height", "100%");
+    }
+    if (!showHeader) {
+      $("#header").css("height", "0");
+      $("#osm-map").css("top", "0");
+      $("#osm-map").css("height", "100%");
+      $("#beta-ribbon").hide();
+    }
+
+    let map = new L.map('osm-map', {
+      center: [51, 10],
+      zoom: initialZoom,
+      zoomControl: interactive,
+      dragging: interactive,
+      doubleClickZoom: interactive,
+      scrollWheelZoom: interactive
+    });
+
+    createBaseLayer().addTo(map);
+    createLegend().addTo(map);
+
+    function createClinicPopupContent(json) {
+      let html = "";
+      html += "<div class=\"popup-clinic\">";
+      html += "<img src=\"images/clinic.png\" alt=\"clinic\" /> ";
+      html += "<div>";
+      html += "<b>{0}</b><br>{1}".format(json.name, json.address);
+      html += "</div>";
+      html += "✉ <a href=\"{0}\">Webseite</a> ".format(json.website);
+      html += "☎ <a href=\"tel:{0}\">Telefon</a>".format(json.phoneNumber);
+      html += "</div>";
+      return html;
+    }
+
+    const defaultPinIcons = [
+      new L.Icon({
+        iconUrl: 'images/marker-icon-2x-blue.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+      }),
+      new L.Icon({
+        iconUrl: 'images/marker-icon-2x-orange.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34]
+      })
+    ];
+
+    function addNutsPolygon(json) {
+      // Invert all coordinates. GeoJson encodes shapes as [lng, lat].
+      const latlngs = json.shape.map(lnglat => [lnglat[1], lnglat[0]]);
+
+      const shape = L.polygon(latlngs, {className: 'nuts-polygon'});
+      shape.bindPopup('<div class="popup-pin"><h2>' + json.ids.length + '</h2></div>');
+      shape.addTo(map);
+    }
+
+    function createImmuneHeroesNutsPopupContent(json) {
+      let html = "";
+      html += "<div class=\"popup-immuneheroes\">";
+      html += "<img src=\"images/superhero.png\" alt=\"hero\" /> ";
+      html += "<b>" + json.users + "</b>";
+      html += "</div>";
+      return html;
+    }
+
+    function invalidInfo(info, message) {
+      console.warn("Encountered invalid item in response:", message, info);
+      return false;
+    }
+
+    function isInteger(N) {
+      return !isNaN(N) && parseInt(Number(N)) == N && !isNaN(parseInt(N, 10));
+    }
+
+    function isValidPinInfo(I) {
+      if (!I.hasOwnProperty("latlng") || !I.latlng.hasOwnProperty("length") || I.latlng.length != 2)
+        return invalidInfo(I, 'Expected pin property "latlng" to be an array with 2 elements');
+      if (!parseFloat(I.latlng[0]) || !parseFloat(I.latlng[1]))
+        return invalidInfo(I, 'Expected elements of pin property "latlng" to be floating point numbers');
+      if (!I.hasOwnProperty("type") || !isInteger(I.type))
+        return invalidInfo(I, 'Expected integer value in pin property "type"');
+      const typeMax = defaultPinIcons.length - 1; // TODO: customizable icons
+      if (I.type < 0 || I.type > typeMax)
+        return invalidInfo(I, 'Expected "type" property of pin in range [0..' + typeMax + ']');
+      if (!I.hasOwnProperty("title"))
+        return invalidInfo(I, 'Expected string value in pin property "title"');
+      return true;
+    }
+
+    function addPin(id, info, icon) {
+      var pin = L.marker(L.latLng(info.latlng), { "icon": icon });
+
+      var previewHtml = '';
+      previewHtml += '<div class="popup-pin">';
+      previewHtml += '<h2><a href="#" onclick="viewDetails(\'' + id + '\');">';
+      previewHtml += info.title.split(/(\s+)/).filter(e => e.trim().length > 1).join('&nbsp;');
+      previewHtml += '</a></h2>';
+      previewHtml += '</div>';
+
+      pin.bindPopup(previewHtml).addTo(map);
+    }
+
+    var allPinsById;
+
+    function viewDetails(id) {
+      if (!allPinsById.hasOwnProperty(id)) {
+        console.error("Requested invalid ID");
+        return;
+      }
+
+      $("#osm-map-details").html('<img src="images/spin_loading.gif" class="spin-loading">');
+      $("#osm-map-pane").show();
+      $("#osm-map").css("width", "calc(100% - 400px)");
+
+      // TODO: if there's space left for the map at all
+      map.panTo(L.latLng(allPinsById[id].latlng));
+
+      if (allPinsById[id].hasOwnProperty("cachedDetails")) {
+        $("#osm-map-details").html(allPinsById[id].cachedDetails);
+      }
+      else {
+        loadHtml(baseUrl + "/map/details_html?ids=" + id).then(
+          html => {
+            $("#osm-map-details").html(html);
+            allPinsById[id].cachedDetails = html;
+          },
+          err => closeDetails()
+        );
+      }
+    }
+
+    function closeDetails() {
+      $("#osm-map-pane").hide();
+      $("#osm-map").css("width", "100%");
+    }
+
+
+    loadJson(baseUrl + '/map/pins').then(pinsById => {
+      for (const id in pinsById) {
+        const pin = pinsById[id];
+        if (isValidPinInfo(pin)) {
+          const icon = defaultPinIcons[pin.type]; // TODO: customizable icons
+          addPin(id, pin, icon);
+        }
+      }
+
+      // Keep the pin data around
+      allPinsById = pinsById;
+    });
+
+    loadJson(baseUrl + "/map/regions").then(idsByZipCode => {
+      for (const zip in idsByZipCode) {
+        //addNutsPolygon(idsByZipCode[zip]);
+      }
+    });
+
+  </script>
+</body>
+</html>

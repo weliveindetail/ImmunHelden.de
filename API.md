@@ -2,7 +2,7 @@
 
 ### `pins`
 
-This request is issued on load and retrieves the position of all pins to display on the map. When the user selects a pin, further information will be fetched for its `id` via `details_html`. There are no filter parameters yet. Pins have a minimal set of properties.
+This request is issued on load and retrieves the position of all pins to display on the map. When the user selects a pin, further information will be fetched for the respective `key` via `details_html`. There are no filter parameters yet. Pins have a minimal set of properties.
 
 | Property | Description |
 | ---- | ---- |
@@ -14,29 +14,28 @@ This request is issued on load and retrieves the position of all pins to display
 Example:
 
 ```
-[
-  {
-    "id": "9867E09AB115",
+
+{
+  "9867E09AB115": { // ID == key
     "type": 0,
     "title": "DRK-Blutspendedienst Nord-Ost",
     "latlng": [ 47.50745779304866, 10.274544954299929 ]
   },
   ...
-]
+}
 ```
 
 Reference: https://immunhelden.de/map/pins
 
 ### `regions`
 
-This request is issued on load and retrieves a set of `id`s per region to display on the map. When the user selects a region, further information will be fetched for all of its `id`s via `details_html`. There are no filter parameters yet. As of now, a region is identified by the German Postleitzahl. The display on the map may combine them into larger chunks depending on the zoom level.
+This request is issued on load and retrieves a set of `id`s per region to display on the map. When the user selects a region, further information will be fetched for all its `id`s via `details_html`. There are no filter parameters yet. As of now, a region is identified by the German Postleitzahl. The display on the map may combine them into larger chunks depending on the zoom level.
 
 Example:
 ```
 {
   "81735": [
-    "098A6EFF789", // IDs
-    "F890EEFCC23"
+    "098A6EFF789", "F890EEFCC23" // IDs
   ],
   ...
 }
@@ -44,13 +43,13 @@ Example:
 
 Reference: https://immunhelden.de/map/regions
 
-### `details_html?id=<ID>`
+### `details_html?ids=id1,id2,id3,...`
 
 This request is issued whenever the user asks for more details on one of your items. The result should be a piece of HTML markup to show in a popup or seperate section on the map. Assume a bright background and basic style settings being given for ordinary HTML elements.
 
 | Parameter | Description |
 | ---- | ---- |
-| `id` | ID of the item to provide detailed information |
+| `ids` | Comma seperated list of IDs to provide detailed information |
 
 Note that you can display contact information here directly (if you have the consent of your users) or embed your own contact form!
 
@@ -70,9 +69,14 @@ Example:
     <input type="submit" value="Go">
   </form>
 </div>
+<hr>
+<div>
+  <h2>Another item</h2>
+  ...
+</div>
 ```
 
-Reference: https://immunhelden.de/map/details_html?id=-M3mVHBAWkbnuve2C4SC
+Reference: https://immunhelden.de/map/details_html?ids=-M3mVHBAWkbnuve2C4SC,-M3mY_6ZBcxv9ogclXsg,-M3l7gQOTb0crfvz5aLN,-M3l8GxpHehFl3Gyklfz
 
 ### `pin_imgs` (optional)
 

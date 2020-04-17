@@ -244,6 +244,13 @@ const DEMO_STAKEHOLDERS = {
     "directContact": true,
     "text" : "Viele Menschen die auf das Angebot der Tafeln angewiesen sind gehören gleichzeitig auch zu den Gruppen in unserer Gesellschaft mit dem höchsten Risiko im Falle einer Corona Erkrankung.\r\n\r\nWir suchen ab sofort 5 ImmunHelden als ehrenamtliche Helfer für die Verteilung von Lebensmitteln. Durch Ihre Mithilfe erweisen Sie der Gesellschaft einen hohen Dienst, indem Sie sowohl unsere Mitarbeiter schützen und damit das Angebot der Tafeln sichern und gleichzeitig das Risiko einer Infektion für unsere Klienten minimieren. Bitte melden Sie sich bei Interesse unter der angegebenen E-Mail Adresse.",
     "zipCode" : "04177"
+  },
+  "ABCDE" : {
+    latlng: [ 52.526417, 13.376720 ],
+    name: "Charité",
+    address: "Charitépl. 1, 10117 Berlin",
+    website: "charite.de",
+    phoneNumber: "030 45050"
   }
 };
 
@@ -329,16 +336,25 @@ const DEMO_HEROES = {
 
 
 exports.pin_locations = functions.https.onRequest(async (req, res) => {
-  const locations = []; // Array
+  const locations = {}; // Map: ID -> { type, title, latlng }
 
   for (const key in DEMO_STAKEHOLDERS) {
     const entry = DEMO_STAKEHOLDERS[key];
-    locations.push({
-      "id": key,
-      "type": 0,
-      "title": entry.organisation,
-      "latLng": [entry.latitude, entry.longitude]
-    });
+    if (key === "ABCDE") {
+      // test another pin type
+      locations[key] = {
+        "type": 1,
+        "title": entry.name,
+        "latlng": entry.latlng
+      };
+    }
+    else {
+      locations[key] = {
+        "type": 0,
+        "title": entry.organisation,
+        "latlng": [entry.latitude, entry.longitude]
+      };
+    }
   }
 
   res.json(locations).send();
@@ -348,13 +364,10 @@ exports.regions = functions.https.onRequest(async (req, res) => {
   const regions = {}; // Map: ZIP -> [ ID, ID, ... ]
 
   for (const key in DEMO_HEROES) {
-    const entry = DEMO_HEROES[key];
-    if (regions.hasOwnProperty(entry.zipCode)) {
-      regions[entry.zipCode].push(key);
-    }
-    else {
-      regions[entry.zipCode] = [key];
-    }
+    const zip = DEMO_HEROES[key].zipCode;
+    if (!regions.hasOwnProperty(zip))
+      regions[zip] = [];
+    regions[zip].push(key);
   }
 
   res.json(regions).send();
@@ -397,15 +410,36 @@ function formatStakeholderDetailsHTML(key, entry) {
 }
 
 exports.details_html = functions.https.onRequest(async (req, res) => {
-  const key = req.query.id;
-  if (DEMO_STAKEHOLDERS.hasOwnProperty(key)) {
-    const html = formatStakeholderDetailsHTML(key, DEMO_STAKEHOLDERS[key]);
-    console.log(html);
-    res.send(html);
-    return;
+  const keys = req.query.ids.split(',');
+  const sections = [];
+  let heroes = 0;
+
+  for (const key of keys) {
+    if (DEMO_STAKEHOLDERS.hasOwnProperty(key)) {
+      sections.push(formatStakeholderDetailsHTML(key, DEMO_STAKEHOLDERS[key]));
+    }
+    else if (DEMO_HEROES.hasOwnProperty(key)) {
+      heroes += 1;
+    }
+    else {
+      console.log('Encountered unknown key: ', key);
+    }
   }
 
-  res.send(""); // No details available
+  let html = '';
+  if (sections.length > 0) {
+    html += sections.join('<hr>\n');
+  }
+  if (heroes > 0) {
+    if (html !== '') {
+      html += '<hr>\n';
+      console.warn('Details request mixed heroes with stakeholders!', req.query.ids);
+    }
+    html += '<div><img src="https://immunhelden.de/images/superhero.png" alt="heroes" style="height: 1.2rem;"> ';
+    html += `<b style="font-size: 1.5rem; color: #d3303b;">${heroes}</b></div>\n`;
+  }
+
+  res.send(html);
 });
 
 
