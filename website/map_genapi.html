@@ -28,7 +28,7 @@
       stroke-width: 1;
       stroke-linecap: round;
       stroke-linejoin: round;
-      fill: rgb(136, 136, 136);
+      fill: rgb(0, 0, 0);
       fill-opacity: 0.025;
     }
 
@@ -315,18 +315,18 @@
     var legend = new L.Control.Legend({ position: 'bottomleft' });
     legend.addTo(map);
 
-    function createClinicPopupContent(json) {
-      let html = "";
-      html += "<div class=\"popup-clinic\">";
-      html += "<img src=\"images/clinic.png\" alt=\"clinic\" /> ";
-      html += "<div>";
-      html += "<b>{0}</b><br>{1}".format(json.name, json.address);
-      html += "</div>";
-      html += "✉ <a href=\"{0}\">Webseite</a> ".format(json.website);
-      html += "☎ <a href=\"tel:{0}\">Telefon</a>".format(json.phoneNumber);
-      html += "</div>";
-      return html;
-    }
+    //function createClinicPopupContent(json) {
+    //  let html = "";
+    //  html += "<div class=\"popup-clinic\">";
+    //  html += "<img src=\"images/clinic.png\" alt=\"clinic\" /> ";
+    //  html += "<div>";
+    //  html += "<b>{0}</b><br>{1}".format(json.name, json.address);
+    //  html += "</div>";
+    //  html += "✉ <a href=\"{0}\">Webseite</a> ".format(json.website);
+    //  html += "☎ <a href=\"tel:{0}\">Telefon</a>".format(json.phoneNumber);
+    //  html += "</div>";
+    //  return html;
+    //}
 
     const defaultPinIcons = [
       new L.Icon({
@@ -342,24 +342,6 @@
         popupAnchor: [1, -34]
       })
     ];
-
-    function addNutsPolygon(json) {
-      // Invert all coordinates. GeoJson encodes shapes as [lng, lat].
-      const latlngs = json.shape.map(lnglat => [lnglat[1], lnglat[0]]);
-
-      const shape = L.polygon(latlngs, {className: 'nuts-polygon'});
-      shape.bindPopup('<div class="popup-pin"><h2>' + json.ids.length + '</h2></div>');
-      shape.addTo(map);
-    }
-
-    function createImmuneHeroesNutsPopupContent(json) {
-      let html = "";
-      html += "<div class=\"popup-immuneheroes\">";
-      html += "<img src=\"images/superhero.png\" alt=\"hero\" /> ";
-      html += "<b>" + json.users + "</b>";
-      html += "</div>";
-      return html;
-    }
 
     function invalidInfo(info, message) {
       console.warn("Encountered invalid item in response:", message, info);
@@ -430,54 +412,44 @@
       }
     }
 
+    var allRegionsByAgs = {};
+
+    function viewDetailsR(ags) {
+      if (!allRegionsByAgs.hasOwnProperty(ags)) {
+        console.error("Requested invalid region", ags);
+        return;
+      }
+
+      $("#osm-map-details").html('<img src="images/spin_loading.gif" class="spin-loading">');
+      $("#osm-map-pane").show();
+      $("#osm-map").css("width", "calc(100% - 400px)");
+
+      // TODO: if there's space left for the map at all
+      map.invalidateSize();
+      map.panTo(allRegionsByAgs[ags].center);
+      $("#legend").hide();
+
+      if (allRegionsByAgs[ags].hasOwnProperty("cachedDetails")) {
+        $("#osm-map-details").html(allRegionsByAgs[ags].cachedDetails);
+      }
+      else {
+        // TODO: find ids for ags
+        loadHtml(baseUrl + "/map/details_html?ids=-M3l6eqWaXOS1cF87OTQ,-M3l7gQOTb0crfvz5aLN,-M3l8GxpHehFl3Gyklfz").then(
+          html => {
+            $("#osm-map-details").html(html);
+            allRegionsByAgs[ags].cachedDetails = html;
+          },
+          err => closeDetails()
+        );
+      }
+    }
+
     function closeDetails() {
       $("#osm-map-pane").hide();
       $("#osm-map").css("width", "100%");
       map.invalidateSize();
       $("#legend").show();
     }
-
-    loadJson('assets/Karte_de_geodata.geo.json').then(geoJson => {
-      var options = {
-        onEachFeature: (feature, layer) => {
-          //if (feature.info) {
-          //  let content = '<b>{0}</b>'.format(feature.info.name);
-          //  if (feature.info.img) {
-          //    content += ('<br>' +
-          //      '<a href="eliseentournee/{0}" target="_blank">' +
-          //        '<img src="eliseentournee/preview/{0}" class="thumb">' +
-          //      '</a>').format(feature.info.img);
-          //  }
-          //  let p = layer.bindPopup(content, {
-          //    offset: L.point(0, -3),
-          //    autoPanPadding: L.point(50, 50),
-          //    autoClose: false,
-          //    closeOnClick: false
-          //  });
-          //  p.bulkOpen = feature.info.open;
-          //  p.latlng = L.latLng({
-          //    lng: feature.geometry.coordinates[0],
-          //    lat: feature.geometry.coordinates[1]
-          //  });
-          //  p.color = dateToColor(feature.info.date);
-          //  popups[nextPopupIdx++] = p;
-          //}
-          //console.log(feature.geometry.coordinates);
-          console.log(feature);
-        }
-        //, pointToLayer: (feature, latlng) => {
-        //  return L.marker(latlng, {
-        //    icon: L.icon({
-        //      iconUrl: 'marker.png',
-        //      className: 'marker-stop'
-        //    })
-        //  });
-        //}
-      };
-
-      console.log(geoJson);
-      L.geoJSON(geoJson, options).addTo(map);
-    });
 
     loadJson(baseUrl + '/map/pins').then(pinsById => {
       for (const id in pinsById) {
@@ -492,10 +464,138 @@
       allPinsById = pinsById;
     });
 
-    loadJson(baseUrl + "/map/regions").then(idsByZipCode => {
-      for (const zip in idsByZipCode) {
-        //addNutsPolygon(idsByZipCode[zip]);
+//    loadJson('assets/zipcodes.de.json').then(zipCodes => {
+//      const reg = {};
+//      for (const entry of zipCodes) {
+//        if (!reg.hasOwnProperty(entry.zipcode))
+//          reg[entry.zipcode] = { "ags": entry.community_code, "latlngs": [] };
+//        reg[entry.zipcode].latlngs.push([parseFloat(entry.latitude), parseFloat(entry.longitude)]);
+//      }
+//      console.log(JSON.stringify(reg));
+//    });
+
+    function isRegionVisible(ags, zoom) {
+      if (zoom < 6) {
+        // Bundesländer
+        return ags.length == 2;
       }
+      else if (zoom < 8) {
+        // Landkreise
+        return ags.length == 4 || ags.length == 5;
+      }
+      else {
+        // Landkreise und Berliner Bezirke
+        return ags.length > 2 && ags != "11000";
+      }
+      return false;
+    }
+
+    function updateVisibleRegions() {
+      var zoom = map.getZoom();
+      for (var ags in allRegionsByAgs) {
+        if (isRegionVisible(ags, zoom)) {
+          allRegionsByAgs[ags].elem.show();
+        }
+        else {
+          allRegionsByAgs[ags].elem.hide();
+        }
+      }
+    }
+
+    function forEachPoint(geometry, predicate) {
+      if (geometry.length == 2 && !geometry[0].hasOwnProperty("length")) {
+        predicate(geometry);
+      }
+      else {
+        for (var component of geometry) {
+          forEachPoint(component, predicate);
+        }
+      }
+    }
+
+    loadJson('assets/Karte_de_geodata.geo.json').then(geoJson => {
+      var geoJsonLayer = L.geoJSON(geoJson).addTo(map);
+      geoJsonLayer.eachLayer(function (layer) {
+        var lnglatRange = [[90, -90], [180, -180]];
+        forEachPoint(layer.feature.geometry.coordinates, lnglat => {
+          for (var i = 0; i < lnglat.length; i++) {
+            if (lnglat[i] < lnglatRange[i][0]) // min
+              lnglatRange[i][0] = lnglat[i];
+            if (lnglat[i] > lnglatRange[i][1]) // max
+              lnglatRange[i][1] = lnglat[i];
+          }
+        });
+
+        var centerLatLng = L.latLng((lnglatRange[1][1] + lnglatRange[1][0]) / 2,
+                                    (lnglatRange[0][1] + lnglatRange[0][0]) / 2);
+
+        if (allRegionsByAgs.hasOwnProperty(layer.feature.properties.ags))
+          console.warn("Duplicate ags?", layer.feature.properties.ags);
+
+        allRegionsByAgs[layer.feature.properties.ags] = {
+          elem: $(layer.getElement()),
+          center: centerLatLng,
+          name: layer.feature.properties.name,
+          fill: 0,
+          zips: [],
+          ids: []
+        };
+
+        layer.on('mouseover', function (e) {
+          //var elem = $(e.target.getElement());
+          var region = allRegionsByAgs[layer.feature.properties.ags];
+          region.elem.css("fill", "#00C0C0");
+          region.elem.css("fill-opacity", "0.2");
+          console.log(layer.feature.properties.ags);
+        });
+        layer.on('mouseout', function (e) {
+          //var elem = $(e.target.getElement());
+          var region = allRegionsByAgs[layer.feature.properties.ags];
+          region.elem.css("fill", "rgb({0}, {0}, {0})".format(region.fill));
+          region.elem.css("fill-opacity", "0.025");
+        });
+        layer.on('click', function (e) {
+          var region = allRegionsByAgs[layer.feature.properties.ags];
+
+          var previewHtml = '';
+          previewHtml += '<div class="popup-pin">';
+          previewHtml += '<h2><a href="#" onclick="viewDetailsR(\'' + layer.feature.properties.ags + '\');">';
+          previewHtml += region.name.split(/(\s+)/).filter(e => e.trim().length > 1).join('&nbsp;');
+          previewHtml += '</a></h2>';
+          previewHtml += '</div>';
+
+          L.popup().setLatLng(region.center).setContent(previewHtml).openOn(map);
+        });
+      });
+
+      map.on('zoomend', updateVisibleRegions);
+      updateVisibleRegions();
+
+      loadJson('assets/zip2ags.json').then(zip2ags => {
+        loadJson(baseUrl + "/map/regions").then(idsByZipCode => {
+          var maxIdsPerRegion = 1;
+          for (var zip in idsByZipCode) {
+            if (!zip2ags.hasOwnProperty(zip)) {
+              console.warn("Unknown ZIP code", zip, "dropping IDs", idsByZipCode[zip]);
+              continue;
+            }
+            var ags = zip2ags[zip].ags;
+            if (!allRegionsByAgs.hasOwnProperty(ags)) {
+              console.warn("Unknown AGS code", ags, "for zip", zip,
+                           "dropping IDs", idsByZipCode[zip]);
+              continue;
+            }
+            allRegionsByAgs[ags].ids = allRegionsByAgs[ags].ids.concat(idsByZipCode[zip]);
+            maxIdsPerRegion = Math.max(maxIdsPerRegion, allRegionsByAgs[ags].ids.length);
+          }
+
+          for (var ags in allRegionsByAgs) {
+            var region = allRegionsByAgs[ags];
+            region.fill = (region.ids.length / maxIdsPerRegion) * 255;
+            region.elem.css("fill", "rgb({0}, {0}, {0})".format(region.fill));
+          }
+        });
+      });
     });
 
   </script>
