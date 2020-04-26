@@ -1,0 +1,260 @@
+<!DOCTYPE HTML>
+<!--
+	Industrious by TEMPLATED
+	templated.co @templatedco
+	Released for free under the Creative Commons Attribution 3.0 license (templated.co/license)
+-->
+<html>
+	<head>
+		<title>ImmunHelden</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<meta name="description" content="" />
+		<meta name="keywords" content="" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+
+		<link rel="stylesheet" href="assets/css/leaflet.css">
+		<script src="assets/js/leaflet.min.js"></script>
+		<script src="assets/js/jquery.min.js"></script>
+
+		<style>
+			#osm-map {
+				height: 35rem;
+				width: 100%;
+				max-width: 100%;
+				overflow: hidden;
+			}
+			#center-marker {
+				position: absolute;
+				left: calc(50% - 12px);
+				top: calc(50% - 41px);
+				width: 25px;
+				height: 41px;
+				z-index: 9999;
+				background-image: url('images/marker-icon-2x-blue.png');
+				background-size: cover;
+			}
+			.wrapper {
+				padding: 2rem 0 2rem 0;
+			}
+			h2 {
+				margin: 0 0 0.5rem 0;
+			}
+			form {
+				margin: 0 0 1rem 0;
+			}
+			label {
+				display: inline-block;
+				font-size: 1rem;
+				font-weight: 400;
+				margin-top: 1rem;
+			}
+			img.asterisk {
+				height: 1rem;
+				width: auto;
+			}
+			#coords {
+				width: 10rem;
+				margin: 1rem;
+			}
+		</style>
+	</head>
+	<body class="is-preload">
+
+		<!-- Header -->
+			<header id="header">
+				<a class="logo" href="index.html">ImmunHelden</a>
+			</header>
+
+		<!-- Main -->
+			<section id="main" class="wrapper">
+				<div class="inner">
+					<div class="content">
+						<header>
+							<h2>Dein Immunstatus</h2>
+							<form id="immunStatusForm" action="/submitImmunstatus">
+								<input type="radio" id="green1" name="status">
+								<label for="green1">
+									Ich habe eine Infektion mit dem Coronavirus SARS-CoV-2 hinter mir und bin inzwischen genesen. Ich kann einen <b>positiven PCR-Test</b> (Bluttest, der derzeit bei Verdacht auf das Vorliegen einer Infektion durchgeführt wird) vorlegen. Der Beginn meiner Symptome bzw. das positive Testergebnis liegt 3 Wochen oder länger zurück.
+								</label>
+								<input type="radio" id="green2" name="status">
+								<label for="green2">
+									Meine Immunität wurde mithilfe eines <b>ELISA-Antikörpertests</b> (Antikörper-Bluttest beim Arzt oder im Krankenhaus) bestätigt. Das Testergebnis kann ich vorlegen.
+								</label>
+								<input type="radio" id="yellow1" name="status">
+								<label for="yellow1">
+									Meine Immunität wurde mithilfe eines <b>Antikörper-Schnelltests</b> (Lateral-Flow-Test) bestätigt. Das Testergebnis kann ich vorlegen.
+								</label>
+								<input type="radio" id="yellow2" name="status">
+								<label for="yellow2">
+									Ich kann meine Immunität nicht nachweisen, habe aber den <b>begründeten Verdacht</b>, dass ich mit SARS-CoV-2 infiziert war, weil ich mich in einem Risikogebiet (siehe Link)aufgehalten habe UND mit den Symptomen Fieber UND Husten erkrankt war. Inzwischen fühle ich mich wieder gesund und der Beginn meiner Erkrankung liegt mindestens 3 Wochen zurück. Den Aufenthalt in einem Risikogebiet kann ich nachweisen (z.B. durch ein Flugticket, meinen Wohnort o.ä.)
+								</label>
+								<input type="radio" id="yellow3" name="status">
+								<label for="yellow3">
+									Ich kann meine Immunität nicht nachweisen, habe aber den <b>begründeten Verdacht</b>, dass ich mit SARS-CoV-2 infiziert war, weil ich Kontakt zu einer nachweislich infizierten Person hatte UND mit den Symptomen Fieber UND Husten erkrankt war. Inzwischen fühle ich mich wieder gesund und der Beginn meiner Erkrankung liegt mindestens 3 Wochen zurück.
+								</label>
+								<div style="float: right;">
+									<input type="checkbox" id="confirmed" onclick="allowSubmit();">
+									<label for="confirmed">Hinweise zum Datenschutz verstanden <img src="images/asterisk.png" class="asterisk"></label>
+									<input type="submit" id="complete" value="Absenden" disabled>
+								</div>
+							</form>
+						</header>
+						<div style="padding-top: 1rem; clear: both;">
+							<img src="images/asterisk.png" class="asterisk">
+							<span>Ich bin mir im Klaren, dass [...] freiwillig ist und jederzeit mit Wirkung auf die Zukunft widerrufen werden kann. Weitere Informationen dazu in unserer <a target="_blank" href="https://immunhelden.de/datenschutz">Datenschutzerklärung</a>.
+							</span>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<script>
+				if (!String.prototype.format) {
+					String.prototype.format = function() {
+						var args = Array.prototype.slice.call(arguments);
+						return this.replace(/{(\d+)}/g, function(match, number) {
+							return typeof args[number] != 'undefined'
+								? args[number]
+								: match
+							;
+						});
+					};
+				}
+
+				function toBool(string) {
+					if (string) {
+						switch (string.toLowerCase().trim()) {
+							case "true": case "yes": case "1": return true;
+							case "false": case "no": case "0": case null: return false;
+							default: return Boolean(string);
+						}
+					}
+					return false;
+				}
+
+				function allowSubmit() {
+					const optionSelected = $('#immunStatusForm input[type=radio]:checked');
+					console.log(optionSelected);
+					const confirmed = $('#confirmed').is(':checked');
+					$('#complete').prop('disabled', !confirmed || !optionSelected);
+				}
+
+				function parseUrlParams(url) {
+					const regex = /[?&]([^=#]+)=([^&#]*)/g;
+					let params = {};
+					let match;
+					while(match = regex.exec(url)) {
+						params[match[1]] = match[2];
+					}
+					return params;
+				}
+
+				/*
+				function createBaseLayer() {
+					return L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',
+						{ attribution:
+								'<a href="http://osm.org/copyright">&copy; OpenStreetMap contributors</a>' });
+				}
+
+				function updateCoords(latLng) {
+					$('#exact_lat').val(latLng.lat);
+					$('#exact_lng').val(latLng.lng);
+
+					const fiveDigits = val => Math.round(val * 100000) / 100000;
+					$('#coords').html('[ {0}, {1} ]'.format(
+							fiveDigits(latLng.lat),
+							fiveDigits(latLng.lng)));
+				}
+
+				const params = parseUrlParams(window.location.href);
+				if (!params.hasOwnProperty("key")) {
+					console.error("Missing URL parameter 'key'");
+				}
+				if (!params.hasOwnProperty("lat")) {
+					console.error("Missing URL parameter 'lat'");
+				}
+				if (!params.hasOwnProperty("lng")) {
+					console.error("Missing URL parameter 'lng'");
+				}
+
+				// Opt-out for organizations. Opt-in for private persons.
+				if (params.hasOwnProperty("map-opt-out")) {
+					$('#show_on_map').prop("checked", toBool(params["map-opt-out"]));
+				}
+
+				// Secret one-time key that identifies the stakeholder data to adjust.
+				$('#key').val(params.key);
+
+				const resolvedLatLng = L.latLng(parseFloat(params.lat), parseFloat(params.lng));
+
+				let map = new L.map('osm-map', {
+					center: resolvedLatLng,
+					zoom: 16,
+					zoomControl: true,
+					scrollWheelZoom: 'center',
+					doubleClickZoom: 'center',
+					touchZoom: 'center'
+				});
+
+				map.on('move', evt => { updateCoords(map.getCenter()); });
+
+				updateCoords(map.getCenter());
+				createBaseLayer().addTo(map);
+				*/
+			</script>
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner">
+					<div class="content">
+						<section>
+							<h3>Ich bin nicht immun, wie kann ich sonst helfen?</h3>
+							<p>Werde unser PR Hero! Teile einfach diese Website mit Freunden, Familie, Kolleg:innen und Nachbar:innen. Je mehr ImmunHelden wir mit offenen Stellen vernetzen können, desto weniger Infektionen wird es geben.</p>
+						</section>
+						<section>
+							<h4>#WirVsVirus</h4>
+							<ul class="alt">
+								<li><a target="_blank" href="https://devpost.com/software/immuneheros">ImmunHelden DevPost</a>
+								<li><a target="_blank" href="https://wirvsvirushackathon.org/">Website Hackathon</a></li>
+								<li><a target="_blank" href="https://www.bundesregierung.de/breg-de/themen/coronavirus/wir-vs-virus-1731968">Bundesregierung</a></li>
+							</ul>
+						</section>
+						<section>
+							<h4>Follow us</h4>
+							<ul class="plain">
+								<li><a target="_blank" href="https://twitter.com/ImmunHelden"><i class="icon fa-twitter">&nbsp;</i>Twitter</a></li>
+								<li><i class="icon fa-facebook">&nbsp;</i>Facebook</li>
+								<li><i class="icon fa-instagram">&nbsp;</i>Instagram</li>
+								<li><a target="_blank" href="https://github.com/weliveindetail/ImmunHelden.de"><i class="icon fa-github">&nbsp;</i>Github</a></li>
+							</ul>
+						</section>
+					</div>
+					<div class="content">
+						<section>
+							<div class="image">
+								<a target="_blank" href="https://wirvsvirushackathon.org/">
+									<img src="images/Logo_02_weiss.svg" alt="logo" width="400px" />
+								</a>
+							</div>
+						</section>
+					</div>
+					<div class="copyright">
+						<a href="datenschutz.html">Datenschutzerklärung</a> •
+            <a href="impressum.html">Impressum ImmunHelden.de</a>
+						<br>
+						Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a>
+						from <a href="https://www.flaticon.com/" title="Flaticon">flaticon.com</a>
+					</div>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
