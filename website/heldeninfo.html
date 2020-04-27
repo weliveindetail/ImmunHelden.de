@@ -71,8 +71,36 @@
         <div class="inner">
           <div class="content">
             <header>
-              <h2>Zusätzliche Angaben</h2>
-              <form id="immunStatusForm" action="/submitImmunstatus" method="GET">
+              <h2>Vielen Dank für Deine Anmeldung!</h2>
+              <p>
+                Eine E-Mail zur Bestätigung deiner Anmeldung ist auf dem Weg. Bitte öffne den Link darin um Deine Anmeldung abzuschließen.
+              </p>
+
+              <p>
+                Um unsere Angebote besser auf Dich zuzuschneiden und unseren Partnern einen genaueren Überblick zu den verfügbaren ImmunHeld:innen zu bieten, kannst du jetzt zusätzliche Angaben machen. Diese <b>Daten werden nicht personenbezogen weitergegeben</b>, sondern nur genutzt um deine Benachrichtigungen zu filtern und statistisch darzustellen wie viele Helfer es pro Region gibt.
+              </p>
+              <form id="immunStatusForm" action="/submitHeldenInfo" method="GET">
+                <h3>Deine Verfügbarkeit</h3>
+                <input type="radio" id="avail-unknown" value="hourly" name="availability" checked>
+                <label for="avail-unknown">
+                  Keine Angabe
+                </label>
+                <br>
+                <input type="radio" id="avail-hourly" value="hourly" name="availability">
+                <label for="avail-hourly">
+                  Stundenweise von Zeit zu Zeit
+                </label>
+                <br>
+                <input type="radio" id="avail-hourly" value="hourly" name="availability">
+                <label for="avail-hourly">
+                  Teilzeit (regelmäßig)
+                </label>
+                <br>
+                <input type="radio" id="avail-hourly" value="hourly" name="availability">
+                <label for="avail-hourly">
+                  Vollzeit
+                </label>
+
                 <h3>Dein Immunstatus</h3>
                 <input type="radio" id="status-unknown" value="unknown" name="status" checked>
                 <label for="status-unknown">
@@ -97,27 +125,6 @@
                 <input type="radio" id="status-assumed-symptoms" value="assumed-symptoms" name="status">
                 <label for="status-assumed-symptoms">
                   Ich kann meine überstandene Infektion nicht nachweisen, habe aber den <b>begründeten Verdacht</b>, dass ich mit SARS-CoV-2 infiziert war, weil ich Kontakt zu einer nachweislich infizierten Person hatte UND mit den Symptomen Fieber UND Husten erkrankt war. Inzwischen fühle ich mich wieder gesund und der Beginn meiner Erkrankung liegt mindestens 3 Wochen zurück.
-                </label>
-
-                <h3>Deine Verfügbarkeit</h3>
-                <input type="radio" id="avail-unknown" value="hourly" name="availability" checked>
-                <label for="avail-unknown">
-                  Keine Angabe
-                </label>
-                <br>
-                <input type="radio" id="avail-hourly" value="hourly" name="availability">
-                <label for="avail-hourly">
-                  Stundenweise von Zeit zu Zeit
-                </label>
-                <br>
-                <input type="radio" id="avail-hourly" value="hourly" name="availability">
-                <label for="avail-hourly">
-                  Teilzeit (regelmäßig)
-                </label>
-                <br>
-                <input type="radio" id="avail-hourly" value="hourly" name="availability">
-                <label for="avail-hourly">
-                  Vollzeit
                 </label>
                 <br>
                 <div style="float: right;">
