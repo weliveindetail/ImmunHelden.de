@@ -80,6 +80,8 @@
                 Um unsere Angebote besser auf Dich zuzuschneiden und unseren Partnern einen genaueren Überblick zu den verfügbaren ImmunHeld:innen zu bieten, kannst du jetzt zusätzliche Angaben machen. Diese <b>Daten werden nicht personenbezogen weitergegeben</b>, sondern nur genutzt um deine Benachrichtigungen zu filtern und statistisch darzustellen wie viele Helfer es pro Region gibt.
               </p>
               <form id="immunStatusForm" action="/submitHeldenInfo" method="GET">
+                <input type="hidden" id="key" name="key">
+
                 <h3>Deine Verfügbarkeit</h3>
                 <input type="radio" id="avail-unknown" value="hourly" name="availability" checked>
                 <label for="avail-unknown">
@@ -91,13 +93,13 @@
                   Stundenweise von Zeit zu Zeit
                 </label>
                 <br>
-                <input type="radio" id="avail-hourly" value="hourly" name="availability">
-                <label for="avail-hourly">
+                <input type="radio" id="avail-parttime" value="parttime" name="availability">
+                <label for="avail-parttime">
                   Teilzeit (regelmäßig)
                 </label>
                 <br>
-                <input type="radio" id="avail-hourly" value="hourly" name="availability">
-                <label for="avail-hourly">
+                <input type="radio" id="avail-fulltime" value="fulltime" name="availability">
+                <label for="avail-fulltime">
                   Vollzeit
                 </label>
 
@@ -181,6 +183,14 @@
           }
           return params;
         }
+
+				// TODO: This should be passed as POST data
+				const params = parseUrlParams(window.location.href);
+				if (!params.hasOwnProperty("key")) {
+					console.error("Missing URL parameter 'key'");
+        }
+
+				$('#key').val(params.key);
 
         /*
         function createBaseLayer() {
