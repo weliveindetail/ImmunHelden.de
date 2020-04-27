@@ -18,6 +18,10 @@
         "function": "addImmuneHero"
       },
       {
+        "source": "/submitHeldenInfo",
+        "function": "submitHeldenInfo"
+      },
+      {
         "source": "/addStakeHolder",
         "function": "addStakeHolder"
       },

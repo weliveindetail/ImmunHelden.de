@@ -36,6 +36,16 @@ exports.addImmuneHero = functions.https.onRequest(async (req, res) => {
   res.redirect('../generic.html');
 });
 
+exports.submitHeldenInfo = functions.https.onRequest(async (req, res) => {
+  // Check for POST request
+  if (req.method !== "POST") {
+    res.status(400).send('Please send a POST request');
+    return;
+  }
+
+  res.send('Eintrag ' + req.body.key + ': available ' + req.body.availability + ' and status ' + req.body.status);
+});
+
 exports.addStakeHolder = functions.https.onRequest(async (req, res) => {
   const address = req.query.address;
   const zipCode = req.query.zipCode;
